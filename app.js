@@ -1,492 +1,157 @@
 const $ = (id) => document.getElementById(id);
+const PX = 96;
+const NS = "http://www.w3.org/2000/svg";
+const state = { labels: [], selectedIndex: 0 };
 
-const controls = {
-  labelWidth: $("labelWidth"),
-  labelHeight: $("labelHeight"),
-  quantity: $("quantity"),
-  seed: $("seed"),
-  complexity: $("complexity"),
-  ornamentDensity: $("ornamentDensity"),
-  innerLineCount: $("innerLineCount"),
-  cornerRadius: $("cornerRadius"),
-  cornerStyle: $("cornerStyle"),
-  symmetry: $("symmetry"),
-  sideFeature: $("sideFeature"),
-  textStyle: $("textStyle"),
-  fillColor: $("fillColor"),
-  strokeColor: $("strokeColor"),
-  accentColor: $("accentColor"),
-  strokeWeight: $("strokeWeight"),
-  itemsInput: $("itemsInput"),
-  fileInput: $("fileInput"),
-  showNames: $("showNames"),
+const c = {
+  labelWidth: $("labelWidth"), labelHeight: $("labelHeight"), quantity: $("quantity"), seed: $("seed"),
+  complexity: $("complexity"), ornamentDensity: $("ornamentDensity"), innerLineCount: $("innerLineCount"), cornerRadius: $("cornerRadius"),
+  cornerStyle: $("cornerStyle"), symmetry: $("symmetry"), sideFeature: $("sideFeature"), textStyle: $("textStyle"),
+  fillColor: $("fillColor"), strokeColor: $("strokeColor"), accentColor: $("accentColor"), strokeWeight: $("strokeWeight"),
+  itemsInput: $("itemsInput"), fileInput: $("fileInput"), showNames: $("showNames"),
 };
 
-const state = {
-  labels: [],
-  selectedIndex: 0,
-};
+function hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function rng(seed) { return () => { let t = seed += 0x6D2B79F5; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function pick(r, a) { return a[Math.floor(r() * a.length)]; }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function n(el, d) { const v = Number(el.value); return Number.isFinite(v) ? v : d; }
+function esc(s) { return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;"); }
 
-const SVG_NS = "http://www.w3.org/2000/svg";
-const PX_PER_IN = 96;
-
-function hashString(str) {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i += 1) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-function mulberry32(seed) {
-  return function rand() {
-    let t = (seed += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function pick(rand, arr) {
-  return arr[Math.floor(rand() * arr.length)];
-}
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function numberValue(input, fallback) {
-  const n = Number(input.value);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-function getConfig() {
+function config() {
   return {
-    widthIn: clamp(numberValue(controls.labelWidth, 2.45), 1, 6),
-    heightIn: clamp(numberValue(controls.labelHeight, 1.45), 0.5, 4),
-    quantity: Math.round(clamp(numberValue(controls.quantity, 36), 1, 120)),
-    seed: controls.seed.value.trim() || "gaucho",
-    complexity: numberValue(controls.complexity, 48) / 100,
-    ornamentDensity: numberValue(controls.ornamentDensity, 30) / 100,
-    innerLineCount: Math.round(numberValue(controls.innerLineCount, 2)),
-    cornerRadius: numberValue(controls.cornerRadius, 14) / 100,
-    cornerStyle: controls.cornerStyle.value,
-    symmetry: controls.symmetry.value,
-    sideFeature: controls.sideFeature.value,
-    textStyle: controls.textStyle.value,
-    fillColor: controls.fillColor.value,
-    strokeColor: controls.strokeColor.value,
-    accentColor: controls.accentColor.value,
-    strokeWeight: clamp(numberValue(controls.strokeWeight, 2), 0.5, 8),
-    showNames: controls.showNames.checked,
+    widthIn: clamp(n(c.labelWidth, 2.45), 1, 6), heightIn: clamp(n(c.labelHeight, 1.45), .5, 4),
+    quantity: Math.round(clamp(n(c.quantity, 36), 1, 120)), seed: c.seed.value.trim() || "gaucho",
+    complexity: n(c.complexity, 45) / 100, detail: n(c.ornamentDensity, 22) / 100,
+    innerLineCount: Math.round(clamp(n(c.innerLineCount, 2), 0, 4)), cornerRadius: n(c.cornerRadius, 14) / 100,
+    cornerStyle: c.cornerStyle.value, symmetry: c.symmetry.value, sideFeature: c.sideFeature.value, textStyle: c.textStyle.value,
+    fillColor: c.fillColor.value, strokeColor: c.strokeColor.value, accentColor: c.accentColor.value,
+    strokeWeight: clamp(n(c.strokeWeight, 2), .5, 8), showNames: c.showNames.checked,
   };
 }
 
-function parseItems() {
-  return controls.itemsInput.value
-    .split(/\r?\n|,/)
-    .map((x) => x.trim())
-    .filter(Boolean);
-}
+function items() { return c.itemsInput.value.split(/\r?\n|,/).map(x => x.trim()).filter(Boolean); }
+function rr(x, y, w, h, r) { r = clamp(r, 0, Math.min(w, h) / 2); return `M ${x+r} ${y} H ${x+w-r} Q ${x+w} ${y} ${x+w} ${y+r} V ${y+h-r} Q ${x+w} ${y+h} ${x+w-r} ${y+h} H ${x+r} Q ${x} ${y+h} ${x} ${y+h-r} V ${y+r} Q ${x} ${y} ${x+r} ${y} Z`; }
+function cham(x, y, w, h, z) { z = clamp(z, 0, Math.min(w,h)/2.2); return `M ${x+z} ${y} H ${x+w-z} L ${x+w} ${y+z} V ${y+h-z} L ${x+w-z} ${y+h} H ${x+z} L ${x} ${y+h-z} V ${y+z} Z`; }
 
-function esc(text) {
-  return String(text)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
-function roundedRectPath(x, y, w, h, r) {
-  r = clamp(r, 0, Math.min(w, h) / 2);
-  return [
-    `M ${x + r} ${y}`,
-    `H ${x + w - r}`,
-    `Q ${x + w} ${y} ${x + w} ${y + r}`,
-    `V ${y + h - r}`,
-    `Q ${x + w} ${y + h} ${x + w - r} ${y + h}`,
-    `H ${x + r}`,
-    `Q ${x} ${y + h} ${x} ${y + h - r}`,
-    `V ${y + r}`,
-    `Q ${x} ${y} ${x + r} ${y}`,
-    "Z",
-  ].join(" ");
-}
-
-function chamferRectPath(x, y, w, h, c) {
-  c = clamp(c, 0, Math.min(w, h) / 2.4);
-  return [
-    `M ${x + c} ${y}`,
-    `H ${x + w - c}`,
-    `L ${x + w} ${y + c}`,
-    `V ${y + h - c}`,
-    `L ${x + w - c} ${y + h}`,
-    `H ${x + c}`,
-    `L ${x} ${y + h - c}`,
-    `V ${y + c}`,
-    `L ${x + c} ${y}`,
-    "Z",
-  ].join(" ");
-}
-
-function basePath(config, variant) {
-  const rand = mulberry32(hashString(`${config.seed}:${variant}:base`));
-  const w = config.widthIn * PX_PER_IN;
-  const h = config.heightIn * PX_PER_IN;
-  const margin = Math.min(w, h) * 0.08;
-  const x = margin;
-  const y = margin;
-  const bw = w - margin * 2;
-  const bh = h - margin * 2;
-  const c = Math.min(bw, bh) * (0.08 + config.cornerRadius * 0.28);
-  const style = config.cornerStyle === "mixed" ? pick(rand, ["rounded", "chamfered"]) : config.cornerStyle;
-  let d = style === "chamfered" ? chamferRectPath(x, y, bw, bh, c) : roundedRectPath(x, y, bw, bh, c);
-
-  const feature = config.sideFeature === "mixed" ? pick(rand, ["tabs", "notches", "scallops", "none"]) : config.sideFeature;
-  const strength = Math.min(w, h) * (0.06 + config.complexity * 0.09);
-  const midY = y + bh / 2;
-  const midX = x + bw / 2;
-  const topFeature = rand() < config.complexity;
-  const sideFeature = feature !== "none" && rand() < 0.95;
-
-  if (!sideFeature && !topFeature) return d;
-
-  const leftBump = feature === "notches" ? -strength : strength;
-  const rightBump = feature === "notches" ? strength : -strength;
-  const scallopCount = feature === "scallops" ? 3 + Math.floor(rand() * 3 + config.complexity * 3) : 1;
-
-  const topDecoration = () => {
-    if (!topFeature) return `H ${x + bw - c}`;
-    const tw = bw * (0.18 + rand() * 0.18);
-    const th = strength * (rand() < 0.5 ? 1 : -1);
-    const start = midX - tw / 2;
-    const end = midX + tw / 2;
-    return [
-      `H ${start}`,
-      `Q ${midX - tw * 0.25} ${y + th} ${midX} ${y}`,
-      `Q ${midX + tw * 0.25} ${y + th} ${end} ${y}`,
-      `H ${x + bw - c}`,
-    ].join(" ");
-  };
-
-  const sideDecoration = (side) => {
-    if (!sideFeature) return side === "right" ? `V ${y + bh - c}` : `V ${y + c}`;
-    const bump = side === "right" ? rightBump : leftBump;
-    const sx = side === "right" ? x + bw : x;
-    const y1 = y + bh * 0.33;
-    const y2 = y + bh * 0.67;
-    const dir = side === "right" ? 1 : -1;
-
-    if (feature === "tabs" || feature === "notches") {
-      return side === "right"
-        ? `V ${y1} Q ${sx + bump * dir} ${midY} ${sx} ${y2} V ${y + bh - c}`
-        : `V ${y2} Q ${sx - bump * dir} ${midY} ${sx} ${y1} V ${y + c}`;
-    }
-
-    const parts = [];
-    const step = (y2 - y1) / scallopCount;
-    if (side === "right") {
-      parts.push(`V ${y1}`);
-      for (let i = 0; i < scallopCount; i += 1) {
-        const a = y1 + i * step;
-        const b = a + step;
-        parts.push(`Q ${sx + strength * 0.75} ${(a + b) / 2} ${sx} ${b}`);
-      }
-      parts.push(`V ${y + bh - c}`);
-    } else {
-      parts.push(`V ${y2}`);
-      for (let i = scallopCount; i > 0; i -= 1) {
-        const b = y1 + i * step;
-        const a = b - step;
-        parts.push(`Q ${sx - strength * 0.75} ${(a + b) / 2} ${sx} ${a}`);
-      }
-      parts.push(`V ${y + c}`);
-    }
-    return parts.join(" ");
-  };
-
-  if (style === "chamfered") {
-    d = [
-      `M ${x + c} ${y}`,
-      topDecoration(),
-      `L ${x + bw} ${y + c}`,
-      sideDecoration("right"),
-      `L ${x + bw - c} ${y + bh}`,
-      `H ${x + c}`,
-      `L ${x} ${y + bh - c}`,
-      sideDecoration("left"),
-      `L ${x + c} ${y}`,
-      "Z",
-    ].join(" ");
-  } else {
-    d = [
-      `M ${x + c} ${y}`,
-      topDecoration(),
-      `Q ${x + bw} ${y} ${x + bw} ${y + c}`,
-      sideDecoration("right"),
-      `Q ${x + bw} ${y + bh} ${x + bw - c} ${y + bh}`,
-      `H ${x + c}`,
-      `Q ${x} ${y + bh} ${x} ${y + bh - c}`,
-      sideDecoration("left"),
-      `Q ${x} ${y} ${x + c} ${y}`,
-      "Z",
-    ].join(" ");
+function sideSegment(k, side, x, y, bw, bh, amp, detail) {
+  const right = side === "r", sx = right ? x + bw : x, sign = right ? 1 : -1;
+  const y1 = y + bh * .32, y2 = y + bh * .68, mid = y + bh / 2;
+  if (k === "none") return right ? `V ${y+bh*.9}` : `V ${y+bh*.1}`;
+  if (k === "tabs") return right ? `V ${y1} Q ${sx+sign*amp} ${mid} ${sx} ${y2} V ${y+bh*.9}` : `V ${y2} Q ${sx+sign*amp} ${mid} ${sx} ${y1} V ${y+bh*.1}`;
+  if (k === "notches") return right ? `V ${y1} Q ${sx-sign*amp*.85} ${mid} ${sx} ${y2} V ${y+bh*.9}` : `V ${y2} Q ${sx-sign*amp*.85} ${mid} ${sx} ${y1} V ${y+bh*.1}`;
+  if (k === "points") return right ? `V ${mid-amp*.45} L ${sx+sign*amp} ${mid} L ${sx} ${mid+amp*.45} V ${y+bh*.9}` : `V ${mid+amp*.45} L ${sx+sign*amp} ${mid} L ${sx} ${mid-amp*.45} V ${y+bh*.1}`;
+  const count = 2 + Math.round(detail * 5);
+  let out = right ? `V ${y1}` : `V ${y2}`;
+  for (let i = 0; i < count; i++) {
+    const a = y1 + (right ? i : count-i) * (y2-y1)/count;
+    const b = y1 + (right ? i+1 : count-i-1) * (y2-y1)/count;
+    out += ` Q ${sx+sign*amp*.55} ${(a+b)/2} ${sx} ${b}`;
   }
-
-  return d;
+  return out + (right ? ` V ${y+bh*.9}` : ` V ${y+bh*.1}`);
 }
 
-function ornamentElements(config, variant, w, h) {
-  const rand = mulberry32(hashString(`${config.seed}:${variant}:ornaments`));
-  const density = config.ornamentDensity;
-  const count = Math.round(density * 10 + config.complexity * 8);
-  if (count <= 0) return "";
-
-  const pieces = [];
-  const cornerSets = [
-    { x: w * 0.17, y: h * 0.22, sx: 1, sy: 1 },
-    { x: w * 0.83, y: h * 0.22, sx: -1, sy: 1 },
-    { x: w * 0.17, y: h * 0.78, sx: 1, sy: -1 },
-    { x: w * 0.83, y: h * 0.78, sx: -1, sy: -1 },
-  ];
-  const active = cornerSets.filter(() => rand() < 0.45 + density * 0.35);
-
-  active.forEach((corner) => {
-    const localCount = Math.max(2, Math.round(count / Math.max(1, active.length)));
-    for (let i = 0; i < localCount; i += 1) {
-      const t = i / Math.max(1, localCount - 1);
-      const x = corner.x + corner.sx * t * w * 0.09;
-      const y = corner.y + corner.sy * Math.sin(t * Math.PI) * h * 0.08 + corner.sy * t * h * 0.08;
-      const r = 1.4 + rand() * 2.4;
-      if (rand() < 0.62) {
-        pieces.push(`<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r.toFixed(2)}" fill="none" stroke="${config.strokeColor}" stroke-width="1" />`);
-      } else {
-        pieces.push(`<path d="M ${x.toFixed(2)} ${y.toFixed(2)} q ${(corner.sx * 8).toFixed(2)} ${(-corner.sy * 5).toFixed(2)} ${(corner.sx * 16).toFixed(2)} 0" fill="none" stroke="${config.strokeColor}" stroke-width="1.25" stroke-linecap="round" />`);
-      }
-    }
-  });
-
-  return pieces.join("\n");
-}
-
-function textElement(config, text, w, h) {
-  if (!config.showNames || !text) return "";
-  const words = text.split(/\s+/).filter(Boolean);
-  const line1 = [];
-  const line2 = [];
-  words.forEach((word, index) => {
-    const target = index < Math.ceil(words.length / 2) || line2.join(" ").length > line1.join(" ").length;
-    (target ? line1 : line2).push(word);
-  });
-  const lines = line2.length ? [line1.join(" "), line2.join(" ")] : [text];
-
-  const styleMap = {
-    classic: { family: "Georgia, 'Times New Roman', serif", weight: 500, transform: "none" },
-    bold: { family: "Georgia, 'Times New Roman', serif", weight: 800, transform: "none" },
-    smallcaps: { family: "Georgia, 'Times New Roman', serif", weight: 500, transform: "uppercase" },
-    sans: { family: "Arial, Helvetica, sans-serif", weight: 700, transform: "none" },
+function outerPath(g, i) {
+  const r = rng(hash(`${g.seed}:${i}:shape`)), w = g.widthIn*PX, h = g.heightIn*PX;
+  const m = Math.min(w,h)*.085, x=m, y=m, bw=w-2*m, bh=h-2*m;
+  const cr = Math.min(bw,bh)*(.07 + g.cornerRadius*.34), amp = Math.min(w,h)*(.035 + g.complexity*.10);
+  const style = g.cornerStyle === "mixed" ? pick(r,["rounded","rounded","chamfered"]) : g.cornerStyle;
+  const family = g.sideFeature === "mixed" ? pick(r,["none","tabs","notches","scallops","points","tabs","notches"]) : g.sideFeature;
+  const top = r() < g.complexity*.9, bottom = g.symmetry === "both" ? top : r() < g.complexity*.55;
+  const topMode = pick(r,["arch","dip","peak","double"]), midX = x + bw/2;
+  const topSeg = () => {
+    if (!top) return `H ${x+bw-cr}`;
+    const tw = bw*(.13 + r()*.20), a = amp*(topMode === "dip" ? 1 : -1);
+    if (topMode === "peak") return `H ${midX-tw/2} L ${midX} ${y+a} L ${midX+tw/2} ${y} H ${x+bw-cr}`;
+    if (topMode === "double") return `H ${midX-tw/2} Q ${midX-tw*.28} ${y+a} ${midX} ${y} Q ${midX+tw*.28} ${y+a} ${midX+tw/2} ${y} H ${x+bw-cr}`;
+    return `H ${midX-tw/2} Q ${midX} ${y+a} ${midX+tw/2} ${y} H ${x+bw-cr}`;
   };
-  const style = styleMap[config.textStyle] || styleMap.classic;
-  const transformed = lines.map((line) => (style.transform === "uppercase" ? line.toUpperCase() : line));
-  const longest = transformed.reduce((max, line) => Math.max(max, line.length), 1);
-  const fontSize = clamp((w * 0.78) / (longest * 0.54), h * 0.18, h * 0.32);
-  const lineHeight = fontSize * 1.05;
-  const startY = h / 2 - ((transformed.length - 1) * lineHeight) / 2 + fontSize * 0.35;
-
-  return `<text x="${w / 2}" y="${startY}" text-anchor="middle" font-family="${style.family}" font-weight="${style.weight}" font-size="${fontSize.toFixed(2)}" fill="#111">${transformed
-    .map((line, i) => `<tspan x="${w / 2}" dy="${i === 0 ? 0 : lineHeight.toFixed(2)}">${esc(line)}</tspan>`)
-    .join("")}</text>`;
+  const botSeg = () => bottom ? topSeg().replaceAll(`${y}`, `${y+bh}`).replace(`H ${midX-tw/2}`, "") : `H ${x+cr}`;
+  if (style === "chamfered") return `M ${x+cr} ${y} ${topSeg()} L ${x+bw} ${y+cr} ${sideSegment(family,"r",x,y,bw,bh,amp,g.detail)} L ${x+bw-cr} ${y+bh} H ${x+cr} L ${x} ${y+bh-cr} ${sideSegment(family,"l",x,y,bw,bh,amp,g.detail)} L ${x+cr} ${y} Z`;
+  return `M ${x+cr} ${y} ${topSeg()} Q ${x+bw} ${y} ${x+bw} ${y+cr} ${sideSegment(family,"r",x,y,bw,bh,amp,g.detail)} Q ${x+bw} ${y+bh} ${x+bw-cr} ${y+bh} H ${x+cr} Q ${x} ${y+bh} ${x} ${y+bh-cr} ${sideSegment(family,"l",x,y,bw,bh,amp,g.detail)} Q ${x} ${y} ${x+cr} ${y} Z`;
 }
 
-function makeLabelSvg(config, variant, name = "") {
-  const w = config.widthIn * PX_PER_IN;
-  const h = config.heightIn * PX_PER_IN;
-  const innerLines = [];
-  const maxInner = clamp(config.innerLineCount, 0, 4);
-
-  for (let i = 0; i < maxInner; i += 1) {
-    const inset = Math.min(w, h) * (0.13 + i * 0.055);
-    const strokeOpacity = 0.75 - i * 0.12;
-    const r = Math.min(w, h) * (0.055 + config.cornerRadius * 0.13);
-    innerLines.push(`<path d="${roundedRectPath(inset, inset, w - inset * 2, h - inset * 2, r)}" fill="none" stroke="${i % 2 ? config.accentColor : config.strokeColor}" stroke-width="${Math.max(0.75, config.strokeWeight * 0.45).toFixed(2)}" opacity="${strokeOpacity.toFixed(2)}" />`);
+function borderDetails(g, i, w, h) {
+  const r = rng(hash(`${g.seed}:${i}:detail`)), d = [], levels = Math.round(g.detail * 5);
+  const sw = Math.max(.7, g.strokeWeight*.35);
+  for (let j = 0; j < levels; j++) {
+    const inset = Math.min(w,h)*(.105 + j*.055);
+    const rad = Math.min(w,h)*(.045 + g.cornerRadius*.12);
+    const stroke = j % 2 ? g.accentColor : g.strokeColor;
+    const dash = r() < g.detail*.35 ? ` stroke-dasharray="${(2+j).toFixed(1)} ${(3+j).toFixed(1)}"` : "";
+    d.push(`<path d="${rr(inset,inset,w-2*inset,h-2*inset,rad)}" fill="none" stroke="${stroke}" stroke-width="${sw}" opacity="${(.72-j*.09).toFixed(2)}"${dash}/>`);
   }
+  if (g.detail > .45) {
+    const inset = Math.min(w,h)*.18, len = Math.min(w,h)*(.08 + g.detail*.06);
+    [[inset,inset,1,1],[w-inset,inset,-1,1],[inset,h-inset,1,-1],[w-inset,h-inset,-1,-1]].forEach(([x,y,sx,sy]) => {
+      d.push(`<path d="M ${x} ${y+sy*len} Q ${x} ${y} ${x+sx*len} ${y}" fill="none" stroke="${g.strokeColor}" stroke-width="${sw*1.4}" stroke-linecap="round"/>`);
+    });
+  }
+  return d.join("\n");
+}
 
-  const outerPath = basePath(config, variant);
-  const ornaments = ornamentElements(config, variant, w, h);
-  const text = textElement(config, name, w, h);
+function labelText(g, text, w, h) {
+  if (!g.showNames || !text) return "";
+  const words = text.split(/\s+/), lines = [];
+  let cur = "";
+  words.forEach(word => { const next = cur ? `${cur} ${word}` : word; if (next.length > 16 && cur) { lines.push(cur); cur = word; } else cur = next; });
+  if (cur) lines.push(cur);
+  const out = lines.length > 3 ? [words.slice(0, Math.ceil(words.length/2)).join(" "), words.slice(Math.ceil(words.length/2)).join(" ")] : lines;
+  const fonts = { classic:["Georgia, 'Times New Roman', serif",600,s=>s], bold:["Georgia, 'Times New Roman', serif",800,s=>s], smallcaps:["Georgia, 'Times New Roman', serif",600,s=>s.toUpperCase()], sans:["Arial, Helvetica, sans-serif",750,s=>s] };
+  const [fam, weight, tx] = fonts[g.textStyle] || fonts.classic, display = out.map(tx);
+  const longest = Math.max(1, ...display.map(s => s.length));
+  const fs = clamp((w*.58)/(longest*.48), h*.13, h*.245);
+  const lh = fs*1.08, y0 = h/2 - (display.length-1)*lh/2 + fs*.34;
+  return `<text x="${w/2}" y="${y0}" text-anchor="middle" font-family="${fam}" font-weight="${weight}" font-size="${fs.toFixed(2)}" fill="#111">${display.map((line,j)=>`<tspan x="${w/2}" dy="${j?lh.toFixed(2):0}">${esc(line)}</tspan>`).join("")}</text>`;
+}
 
-  return `<svg xmlns="${SVG_NS}" width="${config.widthIn}in" height="${config.heightIn}in" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(name || `Label ${variant + 1}`)}">
-  <rect width="100%" height="100%" fill="white" opacity="0" />
-  <path d="${outerPath}" fill="${config.fillColor}" stroke="${config.strokeColor}" stroke-width="${config.strokeWeight}" />
-  ${innerLines.join("\n  ")}
-  ${ornaments}
-  ${text}
+function makeSvg(g, i, name="") {
+  const w = g.widthIn*PX, h = g.heightIn*PX;
+  return `<svg xmlns="${NS}" width="${g.widthIn}in" height="${g.heightIn}in" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(name || `Label ${i+1}`)}">
+<rect width="100%" height="100%" fill="white" opacity="0"/>
+<path d="${outerPath(g,i)}" fill="${g.fillColor}" stroke="${g.strokeColor}" stroke-width="${g.strokeWeight}"/>
+${borderDetails(g,i,w,h)}
+${labelText(g,name,w,h)}
 </svg>`;
 }
 
-function generateLabels() {
-  const config = getConfig();
-  const items = parseItems();
-  state.labels = Array.from({ length: config.quantity }, (_, i) => ({
-    index: i,
-    name: items[i % Math.max(1, items.length)] || "",
-    svg: makeLabelSvg(config, i, items[i % Math.max(1, items.length)] || ""),
-  }));
-  state.selectedIndex = Math.min(state.selectedIndex, state.labels.length - 1);
-  renderPreview();
+function generate() {
+  const g = config(), list = items(), names = list.length ? list : [""];
+  state.labels = Array.from({length:g.quantity}, (_,i)=>({index:i, name:names[i%names.length], svg:makeSvg(g,i,names[i%names.length])}));
+  state.selectedIndex = clamp(state.selectedIndex, 0, state.labels.length-1);
+  render();
 }
 
-function renderPreview() {
-  const grid = $("previewGrid");
-  const template = $("labelCardTemplate");
-  grid.innerHTML = "";
-  state.labels.forEach((label) => {
-    const node = template.content.firstElementChild.cloneNode(true);
+function render() {
+  const grid = $("previewGrid"), tpl = $("labelCardTemplate"); grid.innerHTML = "";
+  state.labels.forEach(label => {
+    const node = tpl.content.firstElementChild.cloneNode(true);
     node.classList.toggle("selected", label.index === state.selectedIndex);
-    node.querySelector(".label-meta").innerHTML = `<span>S${String(label.index + 1).padStart(2, "0")}</span><span>${esc(label.name || "Blank sample")}</span>`;
+    node.querySelector(".label-meta").innerHTML = `<span>S${String(label.index+1).padStart(2,"0")}</span><span>${esc(label.name||"Blank sample")}</span>`;
     node.querySelector(".label-svg-wrap").innerHTML = label.svg;
-    node.addEventListener("click", () => {
-      state.selectedIndex = label.index;
-      renderPreview();
-    });
+    node.onclick = () => { state.selectedIndex = label.index; render(); };
     grid.appendChild(node);
   });
-  $("statusText").textContent = `${state.labels.length} labels generated. Selected S${String(state.selectedIndex + 1).padStart(2, "0")}.`;
+  const first = state.labels[state.selectedIndex];
+  const live = $("liveSample");
+  if (live && first) live.innerHTML = first.svg;
+  $("statusText").textContent = `${state.labels.length} labels generated. Selected S${String(state.selectedIndex+1).padStart(2,"0")}.`;
 }
 
-function downloadText(filename, mime, text) {
-  const blob = new Blob([text], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+function download(filename, mime, text) { const b = new Blob([text], {type:mime}), u = URL.createObjectURL(b), a = document.createElement("a"); a.href=u; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(u); }
+function selectedSvg() { const l = state.labels[state.selectedIndex]; if (!l) return; const safe = (l.name || `label-${l.index+1}`).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") || "label"; download(`${safe}.svg`, "image/svg+xml", l.svg); }
+function sheetSvg() { const g = config(), cols=3, gap=.2, margin=.35, rows=Math.ceil(state.labels.length/cols), W=8.5, H=Math.max(11, margin*2+rows*g.heightIn+Math.max(0,rows-1)*gap); const lw=g.widthIn*PX, lh=g.heightIn*PX, gp=gap*PX, start=(W*PX-(cols*lw+(cols-1)*gp))/2; const body=state.labels.map((l,i)=>`<g transform="translate(${(start+(i%cols)*(lw+gp)).toFixed(2)} ${(margin*PX+Math.floor(i/cols)*(lh+gp)).toFixed(2)})">${l.svg.replace(/<svg[^>]*>/,"").replace("</svg>","")}</g>`).join("\n"); return `<svg xmlns="${NS}" width="${W}in" height="${H}in" viewBox="0 0 ${W*PX} ${H*PX}"><rect width="100%" height="100%" fill="white"/>${body}</svg>`; }
+function downloadSheet() { download("gaucho-salad-bar-label-sheet.svg", "image/svg+xml", sheetSvg()); }
+function printSheet() { const g=config(); const html=`<!doctype html><html><head><title>Gaucho Labels</title><style>@page{size:letter;margin:.35in}body{margin:0}.sheet{display:grid;grid-template-columns:repeat(3,${g.widthIn}in);gap:.2in;justify-content:center}.label,svg{width:${g.widthIn}in;height:${g.heightIn}in;break-inside:avoid}</style></head><body><div class="sheet">${state.labels.map(l=>`<div class="label">${l.svg}</div>`).join("")}</div><script>window.onload=()=>setTimeout(()=>print(),150)<\/script></body></html>`; const win=window.open("","_blank"); if(!win) return alert("Popup blocked. Allow popups to open the print sheet."); win.document.write(html); win.document.close(); }
+
+function bindRange(input, out) { const f=()=>out.textContent=input.value; input.addEventListener("input", f); f(); }
+function setup() {
+  $("generateBtn").onclick = generate;
+  $("randomizeSeedBtn").onclick = () => { c.seed.value = `gaucho-${Math.floor(Math.random()*999999)}`; generate(); };
+  $("downloadSelectedSvgBtn").onclick = selectedSvg; $("downloadSheetSvgBtn").onclick = downloadSheet; $("printSheetBtn").onclick = printSheet;
+  Object.values(c).forEach(el => { if (el && el !== c.fileInput && el !== c.itemsInput) el.addEventListener("change", generate); });
+  c.fileInput.addEventListener("change", async e => { const file=e.target.files?.[0]; if(!file) return; const txt=await file.text(); c.itemsInput.value=txt.split(/\r?\n/).map(line=>line.split(",")[0]?.trim()||"").filter(Boolean).join("\n"); generate(); });
+  bindRange(c.complexity, $("complexityValue")); bindRange(c.ornamentDensity, $("ornamentDensityValue")); bindRange(c.innerLineCount, $("innerLineCountValue")); bindRange(c.cornerRadius, $("cornerRadiusValue"));
+  generate();
 }
-
-function downloadSelectedSvg() {
-  const label = state.labels[state.selectedIndex];
-  if (!label) return;
-  const safeName = (label.name || `label-${label.index + 1}`).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  downloadText(`${safeName || "label"}.svg`, "image/svg+xml", label.svg);
-}
-
-function makeSheetSvg() {
-  const config = getConfig();
-  const cols = 3;
-  const gapIn = 0.2;
-  const marginIn = 0.35;
-  const rows = Math.ceil(state.labels.length / cols);
-  const sheetW = 8.5;
-  const sheetH = Math.max(11, marginIn * 2 + rows * config.heightIn + Math.max(0, rows - 1) * gapIn);
-  const labelWpx = config.widthIn * PX_PER_IN;
-  const labelHpx = config.heightIn * PX_PER_IN;
-  const sheetWpx = sheetW * PX_PER_IN;
-  const sheetHpx = sheetH * PX_PER_IN;
-  const gapPx = gapIn * PX_PER_IN;
-  const marginPx = marginIn * PX_PER_IN;
-  const totalGridW = cols * labelWpx + (cols - 1) * gapPx;
-  const startX = (sheetWpx - totalGridW) / 2;
-
-  const content = state.labels
-    .map((label, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = startX + col * (labelWpx + gapPx);
-      const y = marginPx + row * (labelHpx + gapPx);
-      const inner = label.svg.replace(/<svg[^>]*>|<\/svg>/g, "");
-      return `<g transform="translate(${x.toFixed(2)} ${y.toFixed(2)})">${inner}</g>`;
-    })
-    .join("\n");
-
-  return `<svg xmlns="${SVG_NS}" width="${sheetW}in" height="${sheetH}in" viewBox="0 0 ${sheetWpx} ${sheetHpx}">
-  <rect width="100%" height="100%" fill="white" />
-  ${content}
-</svg>`;
-}
-
-function downloadSheetSvg() {
-  if (!state.labels.length) return;
-  downloadText("gaucho-salad-bar-label-sheet.svg", "image/svg+xml", makeSheetSvg());
-}
-
-function openPrintSheet() {
-  if (!state.labels.length) return;
-  const config = getConfig();
-  const html = `<!doctype html><html><head><title>Gaucho Salad Bar Labels</title><style>
-    @page { size: letter; margin: 0.35in; }
-    body { margin: 0; font-family: Georgia, 'Times New Roman', serif; }
-    .sheet { display: grid; grid-template-columns: repeat(3, ${config.widthIn}in); gap: 0.2in; justify-content: center; align-content: start; }
-    .label { width: ${config.widthIn}in; height: ${config.heightIn}in; break-inside: avoid; page-break-inside: avoid; }
-    svg { display: block; width: ${config.widthIn}in; height: ${config.heightIn}in; }
-  </style></head><body><div class="sheet">${state.labels.map((label) => `<div class="label">${label.svg}</div>`).join("")}</div><script>window.addEventListener('load', () => setTimeout(() => window.print(), 150));<\/script></body></html>`;
-  const win = window.open("", "_blank");
-  if (!win) {
-    alert("Popup blocked. Please allow popups for this page to open the print sheet.");
-    return;
-  }
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-}
-
-function bindRangeValue(input, output) {
-  const update = () => {
-    output.textContent = input.value;
-  };
-  input.addEventListener("input", update);
-  update();
-}
-
-function setupEvents() {
-  $("generateBtn").addEventListener("click", generateLabels);
-  $("randomizeSeedBtn").addEventListener("click", () => {
-    controls.seed.value = `gaucho-${Math.floor(Math.random() * 999999)}`;
-    generateLabels();
-  });
-  $("downloadSelectedSvgBtn").addEventListener("click", downloadSelectedSvg);
-  $("downloadSheetSvgBtn").addEventListener("click", downloadSheetSvg);
-  $("printSheetBtn").addEventListener("click", openPrintSheet);
-  controls.showNames.addEventListener("change", generateLabels);
-
-  [
-    controls.labelWidth,
-    controls.labelHeight,
-    controls.quantity,
-    controls.complexity,
-    controls.ornamentDensity,
-    controls.innerLineCount,
-    controls.cornerRadius,
-    controls.cornerStyle,
-    controls.symmetry,
-    controls.sideFeature,
-    controls.textStyle,
-    controls.fillColor,
-    controls.strokeColor,
-    controls.accentColor,
-    controls.strokeWeight,
-  ].forEach((control) => control.addEventListener("change", generateLabels));
-
-  controls.fileInput.addEventListener("change", async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    controls.itemsInput.value = text
-      .split(/\r?\n/)
-      .map((line) => line.split(",")[0]?.trim() || "")
-      .filter(Boolean)
-      .join("\n");
-    generateLabels();
-  });
-
-  bindRangeValue(controls.complexity, $("complexityValue"));
-  bindRangeValue(controls.ornamentDensity, $("ornamentDensityValue"));
-  bindRangeValue(controls.innerLineCount, $("innerLineCountValue"));
-  bindRangeValue(controls.cornerRadius, $("cornerRadiusValue"));
-}
-
-setupEvents();
-generateLabels();
+setup();
