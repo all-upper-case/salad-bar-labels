@@ -21,11 +21,12 @@
   <main class="layout">
     <aside class="controls" aria-label="Label generator controls">
       <section class="panel live-sample-panel">
-        <div class="live-sample-header">
-          <h2>Live sample</h2>
-          <p>Selected label updates as you adjust controls.</p>
-        </div>
+        <div class="live-sample-header"><h2>Live sample</h2><p>Selected label updates as you adjust controls.</p></div>
         <div id="liveSample" class="live-sample"></div>
+        <div class="button-stack edit-buttons">
+          <button id="editSelectedBtn" type="button" class="primary">Edit selected label</button>
+          <button id="resetEditBtn" type="button">Reset selected edit</button>
+        </div>
       </section>
 
       <section class="panel">
@@ -45,18 +46,10 @@
         <label>Inner line count<input id="innerLineCount" type="range" min="0" max="4" value="2" /><span id="innerLineCountValue" class="range-value">2</span></label>
         <label>Corner radius<input id="cornerRadius" type="range" min="0" max="45" value="14" /><span id="cornerRadiusValue" class="range-value">14</span></label>
         <div class="grid two">
-          <label>Corner style
-            <select id="cornerStyle"><option value="rounded">Rounded</option><option value="chamfered">Chamfered</option><option value="mixed">Mixed</option></select>
-          </label>
-          <label>Symmetry
-            <select id="symmetry"><option value="horizontal">Horizontal</option><option value="both">Both axes</option><option value="none">Loose</option></select>
-          </label>
-          <label>Side features
-            <select id="sideFeature"><option value="mixed">Mixed</option><option value="tabs">Tabs</option><option value="notches">Notches</option><option value="scallops">Scallops</option><option value="points">Points</option><option value="none">None</option></select>
-          </label>
-          <label>Text style
-            <select id="textStyle"><option value="classic">Classic serif</option><option value="bold">Bold serif</option><option value="smallcaps">Small caps</option><option value="sans">Clean sans</option></select>
-          </label>
+          <label>Corner style<select id="cornerStyle"><option value="rounded">Rounded</option><option value="chamfered">Chamfered</option><option value="mixed">Mixed</option></select></label>
+          <label>Symmetry<select id="symmetry"><option value="horizontal">Horizontal</option><option value="both">Both axes</option><option value="none">Loose</option></select></label>
+          <label>Side features<select id="sideFeature"><option value="mixed">Mixed</option><option value="tabs">Tabs</option><option value="notches">Notches</option><option value="scallops">Scallops</option><option value="points">Points</option><option value="none">None</option></select></label>
+          <label>Text style<select id="textStyle"><option value="classic">Classic serif</option><option value="bold">Bold serif</option><option value="smallcaps">Small caps</option><option value="sans">Clean sans</option></select></label>
         </div>
       </section>
 
@@ -108,9 +101,27 @@ Lobster Bisque</textarea>
     </section>
   </main>
 
-  <template id="labelCardTemplate">
-    <article class="label-card"><div class="label-meta"></div><div class="label-svg-wrap"></div></article>
-  </template>
+  <section id="editorOverlay" class="editor-overlay" hidden>
+    <div class="editor-card">
+      <div class="editor-header">
+        <div><h2>Edit label</h2><p>Drag the blue handles to resize/deform the shape. Drag the text handle to reposition the name.</p></div>
+        <button id="cancelEditBtn" type="button">Close</button>
+      </div>
+      <div class="editor-body">
+        <div id="editCanvas" class="edit-canvas"></div>
+        <div class="editor-controls">
+          <label>Text<input id="editText" type="text" /></label>
+          <label>Text size<input id="editFontSize" type="range" min="60" max="145" value="100" /><span id="editFontSizeValue" class="range-value">100</span></label>
+          <label>Text X<input id="editTextX" type="range" min="-60" max="60" value="0" /><span id="editTextXValue" class="range-value">0</span></label>
+          <label>Text Y<input id="editTextY" type="range" min="-45" max="45" value="0" /><span id="editTextYValue" class="range-value">0</span></label>
+          <label>Font style<select id="editFontStyle"><option value="classic">Classic serif</option><option value="bold">Bold serif</option><option value="smallcaps">Small caps</option><option value="sans">Clean sans</option></select></label>
+          <div class="button-stack"><button id="saveEditBtn" type="button" class="primary">Save edited label</button><button id="cancelEditBtn2" type="button">Cancel without saving</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <template id="labelCardTemplate"><article class="label-card"><div class="label-meta"></div><div class="label-svg-wrap"></div></article></template>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
