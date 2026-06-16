@@ -20,85 +20,42 @@
 
   <main class="layout">
     <aside class="controls" aria-label="Label generator controls">
-      <section class="panel">
-        <h2>Label setup</h2>
-        <div class="grid two">
-          <label>
-            Width (in)
-            <input id="labelWidth" type="number" min="1" max="6" step="0.05" value="2.45" />
-          </label>
-          <label>
-            Height (in)
-            <input id="labelHeight" type="number" min="0.5" max="4" step="0.05" value="1.45" />
-          </label>
-          <label>
-            Quantity
-            <input id="quantity" type="number" min="1" max="120" step="1" value="36" />
-          </label>
-          <label>
-            Seed
-            <input id="seed" type="text" value="gaucho" />
-          </label>
+      <section class="panel live-sample-panel">
+        <div class="live-sample-header">
+          <h2>Live sample</h2>
+          <p>Selected label updates as you adjust controls.</p>
         </div>
+        <div id="liveSample" class="live-sample"></div>
       </section>
 
       <section class="panel">
-        <h2>Shape controls</h2>
-        <label>
-          Complexity
-          <input id="complexity" type="range" min="0" max="100" value="48" />
-          <span id="complexityValue" class="range-value">48</span>
-        </label>
-        <label>
-          Ornament density
-          <input id="ornamentDensity" type="range" min="0" max="100" value="30" />
-          <span id="ornamentDensityValue" class="range-value">30</span>
-        </label>
-        <label>
-          Inner line count
-          <input id="innerLineCount" type="range" min="0" max="4" value="2" />
-          <span id="innerLineCountValue" class="range-value">2</span>
-        </label>
-        <label>
-          Corner radius
-          <input id="cornerRadius" type="range" min="0" max="45" value="14" />
-          <span id="cornerRadiusValue" class="range-value">14</span>
-        </label>
+        <h2>Label setup</h2>
         <div class="grid two">
-          <label>
-            Corner style
-            <select id="cornerStyle">
-              <option value="rounded">Rounded</option>
-              <option value="chamfered">Chamfered</option>
-              <option value="mixed">Mixed</option>
-            </select>
+          <label>Width (in)<input id="labelWidth" type="number" min="1" max="6" step="0.05" value="2.45" /></label>
+          <label>Height (in)<input id="labelHeight" type="number" min="0.5" max="4" step="0.05" value="1.45" /></label>
+          <label>Quantity<input id="quantity" type="number" min="1" max="120" step="1" value="36" /></label>
+          <label>Seed<input id="seed" type="text" value="gaucho" /></label>
+        </div>
+      </section>
+
+      <section class="panel control-panel">
+        <h2>Shape and border controls</h2>
+        <label>Shape complexity<input id="complexity" type="range" min="0" max="100" value="48" /><span id="complexityValue" class="range-value">48</span></label>
+        <label>Border detail<input id="ornamentDensity" type="range" min="0" max="100" value="22" /><span id="ornamentDensityValue" class="range-value">22</span></label>
+        <label>Inner line count<input id="innerLineCount" type="range" min="0" max="4" value="2" /><span id="innerLineCountValue" class="range-value">2</span></label>
+        <label>Corner radius<input id="cornerRadius" type="range" min="0" max="45" value="14" /><span id="cornerRadiusValue" class="range-value">14</span></label>
+        <div class="grid two">
+          <label>Corner style
+            <select id="cornerStyle"><option value="rounded">Rounded</option><option value="chamfered">Chamfered</option><option value="mixed">Mixed</option></select>
           </label>
-          <label>
-            Symmetry
-            <select id="symmetry">
-              <option value="horizontal">Horizontal</option>
-              <option value="both">Both axes</option>
-              <option value="none">Loose</option>
-            </select>
+          <label>Symmetry
+            <select id="symmetry"><option value="horizontal">Horizontal</option><option value="both">Both axes</option><option value="none">Loose</option></select>
           </label>
-          <label>
-            Side features
-            <select id="sideFeature">
-              <option value="mixed">Mixed</option>
-              <option value="tabs">Tabs</option>
-              <option value="notches">Notches</option>
-              <option value="scallops">Scallops</option>
-              <option value="none">None</option>
-            </select>
+          <label>Side features
+            <select id="sideFeature"><option value="mixed">Mixed</option><option value="tabs">Tabs</option><option value="notches">Notches</option><option value="scallops">Scallops</option><option value="points">Points</option><option value="none">None</option></select>
           </label>
-          <label>
-            Text style
-            <select id="textStyle">
-              <option value="classic">Classic serif</option>
-              <option value="bold">Bold serif</option>
-              <option value="smallcaps">Small caps</option>
-              <option value="sans">Clean sans</option>
-            </select>
+          <label>Text style
+            <select id="textStyle"><option value="classic">Classic serif</option><option value="bold">Bold serif</option><option value="smallcaps">Small caps</option><option value="sans">Clean sans</option></select>
           </label>
         </div>
       </section>
@@ -106,29 +63,17 @@
       <section class="panel">
         <h2>Color and line</h2>
         <div class="grid two">
-          <label>
-            Fill
-            <input id="fillColor" type="color" value="#f1e7cf" />
-          </label>
-          <label>
-            Stroke
-            <input id="strokeColor" type="color" value="#5d584d" />
-          </label>
-          <label>
-            Accent
-            <input id="accentColor" type="color" value="#b9a982" />
-          </label>
-          <label>
-            Stroke weight
-            <input id="strokeWeight" type="number" min="0.5" max="8" step="0.25" value="2" />
-          </label>
+          <label>Fill<input id="fillColor" type="color" value="#f1e7cf" /></label>
+          <label>Stroke<input id="strokeColor" type="color" value="#5d584d" /></label>
+          <label>Accent<input id="accentColor" type="color" value="#b9a982" /></label>
+          <label>Stroke weight<input id="strokeWeight" type="number" min="0.5" max="8" step="0.25" value="2" /></label>
         </div>
       </section>
 
       <section class="panel">
         <h2>Food names</h2>
-        <p class="hint">Paste one item per line, or upload a simple TXT/CSV file. Blank names will become shape samples.</p>
-        <textarea id="itemsInput" rows="9">Apple Salad
+        <p class="hint">Paste one item per line, or upload a simple TXT/CSV file.</p>
+        <textarea id="itemsInput" rows="8">Apple Salad
 Bleu Cheese Salad
 Prosciutto
 Genoa Salami
@@ -156,25 +101,16 @@ Lobster Bisque</textarea>
 
     <section class="workspace">
       <div class="workspace-header">
-        <div>
-          <h2>Generated labels</h2>
-          <p id="statusText">Ready.</p>
-        </div>
-        <label class="compact-check">
-          <input id="showNames" type="checkbox" checked /> Show names
-        </label>
+        <div><h2>Generated labels</h2><p id="statusText">Ready.</p></div>
+        <label class="compact-check"><input id="showNames" type="checkbox" checked /> Show names</label>
       </div>
       <div id="previewGrid" class="preview-grid" aria-live="polite"></div>
     </section>
   </main>
 
   <template id="labelCardTemplate">
-    <article class="label-card">
-      <div class="label-meta"></div>
-      <div class="label-svg-wrap"></div>
-    </article>
+    <article class="label-card"><div class="label-meta"></div><div class="label-svg-wrap"></div></article>
   </template>
-
   <script type="module" src="./app.js"></script>
 </body>
 </html>
